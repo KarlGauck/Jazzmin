@@ -7,11 +7,14 @@ import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.model.chat.response.ChatResponse
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler
 import dev.langchain4j.model.ollama.OllamaStreamingChatModel
+import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.example.chatmodel.ChatModel
 import org.vosk.LibVosk
 import org.vosk.LogLevel
 import org.vosk.Model
 import org.vosk.Recognizer
-import java.util.concurrent.TimeUnit
 import javax.sound.sampled.*
 import kotlin.concurrent.thread
 
@@ -29,43 +32,10 @@ fun buildAudioInputStream(): TargetDataLine? {
 }
 
 fun messageOllama(model: OllamaStreamingChatModel, message: String, speak: Espeak) {
-    val response = model.chat(listOf(
-        SystemMessage("Answer in one flowing text without special formatting characters and be as concise and short as possible"),
-        UserMessage(message)
-    ), object: StreamingChatResponseHandler {
-        override fun onPartialResponse(p0: String?) {
-            if (p0?.isEmpty() ?: return)
-                return
-            println(p0)
-        }
 
-        override fun onCompleteResponse(p0: ChatResponse?) {
-            println(p0)
-            //speak.speak(p0?.aiMessage()?.text())
-            val command = arrayOf("./bin/python", "./tts.py", p0?.aiMessage()?.text() ?: "")
-            val proc = Runtime.getRuntime().exec(command)
-            val exit = proc.waitFor()
-            println(exit)
-        }
-
-        override fun onError(p0: Throwable?) {
-
-        }
-    })
 }
 
-
-fun main()** {
-
-    val MODEL = /*"tinydolphin" */ "deepseek-r1:7b"
-
-    val model = OllamaStreamingChatModel.builder()
-        .baseUrl("http://127.0.0.1:11434")
-        .temperature(1.0)
-        .modelName(MODEL)
-        .think(false)
-        .build()
-
+fun main(): Unit = runBlocking {
     val voice = Voice()
     voice.name = "en-us"
     voice.amplitude = 100
@@ -85,7 +55,7 @@ fun main()** {
 
 
     val mic = buildAudioInputStream()// AudioSystem.getAudioInputStream(BufferedInputStream(FileInputStream("test.wav")))
-    thread (start = true) {
+    launch {
         val bytes = ByteArray(4096)
 
         var last = ""
@@ -99,7 +69,9 @@ fun main()** {
                 if (last != recognizer.result) {
                     val message = last.split("\"")[3]
                     if (message.isNotEmpty())
-                        messageOllama(model, message, speak)
+                        ChatModel.message(message).takeWhile { it != null }.collect { token ->
+                            println("lel $token")
+                        }
                     last = recognizer.result
                 }
             } else {
