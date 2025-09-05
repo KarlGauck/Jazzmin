@@ -19,11 +19,18 @@ object ChatModel {
         TINYDOLPHIN("tinydolphin")
     }
 
+    val MODEL_TYPE = MODEL.DEEPSEEK
+    val OLLAMA_URL = "http://127.0.0.1:11434"
+    val TEMPERATURE = 1.0
+    val THINKING = false
+
+    val SYSTEM_PROMPT = "Answer in one flowing text without special formatting characters and be as concise and short as possible"
+
     val model: OllamaStreamingChatModel = OllamaStreamingChatModel.builder()
-        .baseUrl("http://127.0.0.1:11434")
-        .temperature(1.0)
-        .modelName(MODEL.DEEPSEEK.handle)
-        .think(false)
+        .baseUrl(OLLAMA_URL)
+        .temperature(TEMPERATURE)
+        .modelName(MODEL_TYPE.handle)
+        .think(THINKING)
         .build()
 
     fun message(scope: CoroutineScope, message: String): Flow<String?> {
@@ -32,7 +39,7 @@ object ChatModel {
 
         val job = scope.launch {
             model.chat(listOf(
-                SystemMessage("Answer in one flowing text without special formatting characters and be as concise and short as possible"),
+                SystemMessage(SYSTEM_PROMPT),
                 UserMessage(message)
             ), object: StreamingChatResponseHandler {
                 override fun onPartialResponse(p0: String?) {
