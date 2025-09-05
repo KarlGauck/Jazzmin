@@ -1,9 +1,14 @@
 package org.example.voice.recognition
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import org.example.chatmodel.ChatModel
+import org.testcontainers.shaded.org.apache.commons.lang3.mutable.Mutable
 import org.vosk.LibVosk
 import org.vosk.LogLevel
 import org.vosk.Model
@@ -40,26 +45,30 @@ object VoiceRecognition {
 
     fun jsonresultToMessage(json: String): String = json.split("\"").getOrElse(3) {""}
 
-    suspend fun listen(): Flow<String> {
+    suspend fun listen(scope: CoroutineScope): MutableSharedFlow<String> {
         val mic = buildAudioInputStream()
 
         var nbytes: Int
         val bytes = ByteArray(4096)
 
         var last = ""
-        val audioFlow = flow {
+        val audioFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
+
+        scope.launch {
             while (true) {
                 nbytes = mic?.read(bytes, 0, bytes.size) ?: break
                 if (nbytes < 0)
                     break
 
-                if (nbytes > 0)
+                if (nbytes > 0) {
                     if (recognizer.acceptWaveForm(bytes, nbytes)) {
                         if (last != recognizer.result)
-                            emit(jsonresultToMessage(last))
+                            audioFlow.emit(jsonresultToMessage(last))
                     } else {
                         last = recognizer.partialResult
                     }
+                }
+                delay(20)
             }
         }
 
