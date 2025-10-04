@@ -21,7 +21,7 @@ import javax.sound.sampled.TargetDataLine
 object VoiceRecognition {
 
     val SAMPLE_RATE = 16_000f //DONT CHANGE, THIS IS VOSK-SPECIFIC
-    val VOICE_MODEL_PATH = "vosk_models/vosk-model-small-en-us-0.15"
+    val VOICE_MODEL_PATH = "vosk_models/vosk-model-de-0.21"
 
     val vosk_model = Model(VOICE_MODEL_PATH)
     val recognizer = Recognizer(vosk_model, SAMPLE_RATE)
